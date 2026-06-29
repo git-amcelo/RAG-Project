@@ -8,7 +8,7 @@ Building a production-ready chat-based RAG application with document upload, emb
 
 ### ✅ Core Application Components
 - Document processing pipeline (PDF/Word)
-- LangChain RAG pipeline with ZAI API
+- LangChain RAG pipeline with Gemini API
 - Modern React chat interface
 - FastAPI backend with async support
 - Comprehensive API integration
