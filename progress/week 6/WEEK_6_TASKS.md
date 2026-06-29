@@ -27,10 +27,9 @@ This week focuses on implementing hybrid retrieval (combining dense vector searc
 - [ ] Create unified retrieval pipeline
 
 **Reranking Implementation**:
-- [ ] Set up cross-encoder reranker models (BGE-reranker-base)
+- [ ] Set up cross-encoder reranker models
 - [ ] Implement cross-encoder re-ranking pipeline
-- [ ] Create query expansion module with synonym generation
-- [ ] Implement query rewriting for ambiguous queries
+- [ ] Create base query expansion module
 - [ ] Add re-ranking result caching mechanism
 - [ ] Configure top-K candidates for re-ranking
 
@@ -211,12 +210,6 @@ This week focuses on implementing hybrid retrieval (combining dense vector searc
 - ✅ Evaluation on MS MARCO, SQuAD v2
 - ✅ Recall@K, MRR metrics
 
-**Out of Scope (Removed from Week 6):**
-- ❌ Advanced Prompting (few-shot, CoT, ReAct, etc.)
-- ❌ Memory Systems (conversation, document, entity memory)
-- ❌ Personalization features
-- ❌ Multi-document retrieval
-- ❌ Constitutional AI
 
 ---
 
@@ -242,4 +235,3 @@ Following the RAG Project Guideline:
 ---
 
 *Last Updated: June 29, 2026*
-*Aligned with RAG Project Guideline PDF Scope*

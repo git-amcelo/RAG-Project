@@ -22,10 +22,9 @@ Implement hybrid retrieval combining dense vector search (FAISS) with sparse ret
 - Add dynamic weighting between dense/sparse
 - Integrate with existing FAISS dense retrieval
 - Create unified retrieval pipeline
-- Set up cross-encoder reranker models (BGE-reranker-base)
+- Set up cross-encoder reranker models
 - Implement cross-encoder re-ranking pipeline
-- Create query expansion module with synonym generation
-- Implement query rewriting for ambiguous queries
+- Create base query expansion module
 - Add re-ranking result caching mechanism
 - Configure top-K candidates for re-ranking
 
@@ -53,9 +52,7 @@ Fusion Strategies:
 - Configurable α parameter for tuning
 
 Query Expansion:
-- Synonym generation using WordNet
-- Related term extraction using embeddings
-- Query decomposition for complex questions
+- Basic term expansion using standard techniques
 ```
 
 **Files to Create**:
@@ -272,7 +269,7 @@ Query Interface:
 │  [Enter your query here...]                    [Search]      │
 ├─────────────────────────────────────────────────────────────┤
 │  Fusion Strategy: [Weighted ▼]   α: [0.7]                   │
-│  Reranking: [✓] Enable   Model: [BGE-reranker ▼]          │
+│  Reranking: [✓] Enable                                    │
 │  Chunk Size: [512 ▼]    Overlap: [100 ▼]                   │
 └─────────────────────────────────────────────────────────────┘
 
@@ -358,7 +355,7 @@ All tasks align with RAG Project Guideline PDF recommendations:
 **Technical Stack**:
 - **Hybrid Retrieval**: FAISS + BM25/TF-IDF, fusion strategies
 - **Reranking**: BGE-reranker models
-- **Query Expansion**: Synonym generation, query rewriting
+- **Query Expansion**: Base query expansion
 - **Chunk Optimization**: Size and overlap analysis
 - **Context Compression**: Relevance scoring, redundancy removal
 - **Evaluation**: MS MARCO, SQuAD v2, Recall@K, MRR metrics
