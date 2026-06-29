@@ -160,7 +160,7 @@ User Interface:
 **Type**: Story | Priority: High | Story Points: 8 | Assignee: Team Member 2
 
 **Description**:
-Implement LangChain-based RAG pipeline with ZAI API integration and build comprehensive document management UI with drag-drop upload, processing status, and document removal functionality.
+Implement LangChain-based RAG pipeline with Gemini API integration and build comprehensive document management UI with drag-drop upload, processing status, and document removal functionality.
 
 ### Week 4: Backend RAG Pipeline
 
@@ -171,7 +171,7 @@ Implement LangChain-based RAG pipeline with ZAI API integration and build compre
 - Created document-aware retrieval with per-document vector stores
 - Implemented context management and relevance filtering
 - Added support for multiple chain types (stuffing, map-reduce, refine)
-- Integrated ZAI API with LangChain for LLM functionality
+- Integrated Gemini API with LangChain for LLM functionality
 - Created RAG evaluation and testing framework
 
 **Technical Implementation**:
@@ -187,7 +187,7 @@ Chain Types:
 │ Refine      │ Iterative       │ ~8k tokens, best     │
 └─────────────┴─────────────────┴──────────────────────┘
 
-ZAI API Configuration:
+Gemini API Configuration:
 - Temperature: 0.1-0.7 (configurable)
 - Max Tokens: 512-2048 (response length)
 - Model: Configurable for different use cases
@@ -220,7 +220,7 @@ Dynamic Model Selection:
 
 **Files Created**:
 - `src/rag_chain.py` - LangChain RAG implementation
-- `src/utils/zai_client.py` - ZAI API integration  
+- `src/utils/Gemini_client.py` - Gemini API integration  
 - `src/prompts.py` - Custom prompt templates
 - `src/model_config.py` - Model configuration and selection
 - `src/model_comparison.py` - BGE vs E5 benchmark comparison
@@ -271,7 +271,7 @@ Document Info Display:
 - `frontend/src/styles/documents.css` - Document styles
 
 **Definition of Done**: ✅ Complete
-- LangChain RAG pipeline working with ZAI API
+- LangChain RAG pipeline working with Gemini API
 - All chain types functional and tested
 - Document upload with drag-drop working
 - Processing status accurate and user-friendly
@@ -401,7 +401,7 @@ Complete end-to-end system integration, comprehensive testing (unit, integration
 ### Week 4: System Integration & LLM Optimization
 
 **Completed Work**:
-- Integrated ZAI API with complete error handling and retry logic
+- Integrated Gemini API with complete error handling and retry logic
 - Implemented configurable model parameters (temperature, max tokens)
 - Created prompt optimization for RAG scenarios
 - Added rate limiting and token counting
@@ -413,7 +413,7 @@ Complete end-to-end system integration, comprehensive testing (unit, integration
 
 **Technical Implementation**:
 ```
-ZAI API Configuration:
+Gemini API Configuration:
 ┌──────────────┬─────────────────┬──────────────────────┐
 │  Parameter   │     Value       │      Purpose         │
 ├──────────────┼─────────────────┼──────────────────────┤
@@ -440,7 +440,7 @@ System Integration:
 ```
 
 **Files Created**:
-- `src/utils/zai_client.py` - ZAI API wrapper
+- `src/utils/Gemini_client.py` - Gemini API wrapper
 - `src/model_config.py` - Model configuration
 - `src/utils/prompts.py` - Prompt templates and optimization
 - `src/model_comparison.py` - Comprehensive model comparison framework
@@ -448,7 +448,7 @@ System Integration:
 - `test_model_comparison.py` - Model comparison test suite
 - `benchmarks/week3_reconstruction.py` - Recreate Week 3 benchmarks
 - `benchmarks/comparison_results.json` - Model comparison results
-- `config/zai_config.yaml` - Model configurations
+- `config/Gemini_config.yaml` - Model configurations
 
 ### Week 5: Testing, Polish & Deployment
 
@@ -521,7 +521,7 @@ UI/UX Features:
 **Weeks 4-5 Deliverables**:
 - ✅ Complete chat-based RAG application
 - ✅ Document upload and processing pipeline (PDF/Word)
-- ✅ LangChain integration with ZAI API
+- ✅ LangChain integration with Gemini API
 - ✅ Modern React frontend with real-time chat
 - ✅ FastAPI backend with async support
 - ✅ Complete API integration
@@ -546,7 +546,7 @@ UI/UX Features:
 - Comprehensive documentation for users and developers
 
 **Technical Stack**:
-- **Backend**: FastAPI, LangChain, ZAI API, FAISS, PyPDF2, python-docx
+- **Backend**: FastAPI, LangChain, Gemini API, FAISS, PyPDF2, python-docx
 - **Frontend**: React, TypeScript, Tailwind CSS, Vite
 - **Testing**: Pytest, Playwright, React Testing Library
 - **Deployment**: Docker, Vercel/Netlify
