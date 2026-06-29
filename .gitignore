@@ -100,4 +100,5 @@ ehthumbs.db
 Thumbs.db
 
 # Project-Specific Ignore Rules
-WEEK_*.md
+WEEK_*.mddata/documents/*
+data/uploads/*
