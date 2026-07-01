@@ -19,12 +19,26 @@ FONT_ITALIC = 'Times-Italic'
 
 # Project Information
 PROJECT_INFO = {
-    "course": "COMP 8967 - Special Topics: Applied NLP/LLM",
-    "title": "Retrieval-Augmented Generation (RAG) Based Question Answering System",
-    "group": "Group 10",
+    "course": "COMP 8967 — Summer 2026",
+    "title": "Retrieval-Augmented Generation (RAG) System for Question Answering",
+    "group": "Team 10",
     "report_type": "Interim Report",
     "date": "June 2026",
-    "semester": "Summer 2026"
+    "semester": "Summer 2026",
+    "academic_session": "Summer 2026 Term (June 1 – July 31, 2026)",
+    "university": "University of Windsor"
+}
+
+# Team Information
+TEAM_INFO = {
+    "supervisor": "Dr. Prashanth Ranga",
+    "academic_affiliate": "Dr. Shaon Shuvo",
+    "members": [
+        {"name": "Anurag Sharma", "id": "110171321"},
+        {"name": "Prabhjot Singh", "id": "110195228"},
+        {"name": "Harpreet Singh", "id": "110177411"},
+        {"name": "Chetan Thakur", "id": "110213868"}
+    ]
 }
 
 def create_custom_styles():
@@ -127,55 +141,99 @@ def create_custom_styles():
     }
 
 def add_cover_page(elements, styles):
-    """Add cover page matching the reference image exactly"""
-    # University header
-    elements.append(Paragraph("University of Windsor", styles['uni_header']))
-    elements.append(Spacer(1, 0.05*inch))
+    """Add cover page matching the university template format"""
+    # Title style with dark blue color
+    dark_blue = colors.HexColor('#00008B')  # Dark blue
 
-    elements.append(Paragraph("Faculty of Engineering", styles['dept_header']))
-    elements.append(Spacer(1, 0.05*inch))
+    # Create title style with dark blue
+    title_style_blue = ParagraphStyle(
+        'TitleBlue',
+        fontName=FONT_BOLD,
+        fontSize=16,
+        leading=20,
+        alignment=TA_CENTER,
+        spaceAfter=12,
+        textColor=dark_blue
+    )
 
-    elements.append(Paragraph("Department of Electrical and Computer Engineering", styles['dept_header']))
-    elements.append(Spacer(1, 0.3*inch))
-
-    # Course line
+    # Report heading
     elements.append(Paragraph(PROJECT_INFO['course'], styles['center']))
-    elements.append(Spacer(1, 0.25*inch))
-
-    # Project title
-    elements.append(Paragraph(PROJECT_INFO['title'], styles['main_title']))
     elements.append(Spacer(1, 0.15*inch))
 
-    # Report type
-    elements.append(Paragraph(PROJECT_INFO['report_type'], styles['heading']))
-    elements.append(Spacer(1, 0.4*inch))
+    # Report Type
+    elements.append(Paragraph(PROJECT_INFO['report_type'], styles['main_title']))
+    elements.append(Spacer(1, 0.1*inch))
 
-    # Group and information table
-    info_data = [
-        ['Group:', PROJECT_INFO['group']],
-        ['Date:', PROJECT_INFO['date']],
-        ['', ''],
-        ['Team Members:', ''],
-        ['', 'Chetan Shinde'],
-        ['', 'Md Zahidul Islam'],
-        ['', 'Md Jashim Uddin'],
-        ['', 'Vivek Kundra']
+    # Project title in dark blue
+    elements.append(Paragraph(PROJECT_INFO['title'], title_style_blue))
+    elements.append(Spacer(1, 0.1*inch))
+
+    # Team number
+    elements.append(Paragraph(PROJECT_INFO['group'], styles['center']))
+    elements.append(Spacer(1, 0.2*inch))
+
+    # Submitted To section
+    elements.append(Paragraph("Submitted To:", styles['subheading']))
+    elements.append(Spacer(1, 0.05*inch))
+
+    # Supervisor info
+    supervisor_data = [
+        [TEAM_INFO['supervisor'], ''],
+        ['Supervisor', '']
     ]
-
-    info_table = Table(info_data, colWidths=[1.2*inch, 3.5*inch])
-    info_table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
-        ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+    supervisor_table = Table(supervisor_data, colWidths=[3.5*inch, 1.2*inch])
+    supervisor_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('FONTNAME', (0, 0), (-1, -1), FONT_NAME),
         ('FONTSIZE', (0, 0), (-1, -1), 12),
         ('LEADING', (0, 0), (-1, -1), 14),
-        ('TOPPADDING', (0, 0), (-1, -1), 2),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
-        ('FONTNAME', (0, 0), (0, -1), FONT_BOLD),
-        ('FONTNAME', (1, 2), (1, 2), FONT_BOLD),
+        ('FONTNAME', (0, 0), (0, 0), FONT_BOLD),
+        ('FONTNAME', (1, 1), (1, 1), FONT_BOLD),
     ]))
-    elements.append(info_table)
+    elements.append(supervisor_table)
+    elements.append(Spacer(1, 0.1*inch))
+
+    # Academic Affiliate
+    elements.append(Paragraph(f"Academic Affiliate: {TEAM_INFO['academic_affiliate']}", styles['normal']))
+    elements.append(Spacer(1, 0.2*inch))
+
+    # Submitted By section
+    elements.append(Paragraph("Submitted By:", styles['subheading']))
+    elements.append(Spacer(1, 0.05*inch))
+
+    # Student Name and Student ID headers
+    headers = ['Student Name', 'Student ID']
+    header_row = [Paragraph(h, ParagraphStyle('Header', fontName=FONT_BOLD, fontSize=11, leading=14)) for h in headers]
+    elements.append(Table([header_row], colWidths=[2.5*inch, 1.5*inch]))
+    elements.append(Spacer(1, 0.02*inch))
+
+    # Team members with student IDs
+    for member in TEAM_INFO['members']:
+        member_data = [
+            member['name'],
+            member['id']
+        ]
+        member_table = Table([member_data], colWidths=[2.5*inch, 1.5*inch])
+        member_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTNAME', (0, 0), (-1, -1), FONT_NAME),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('LEADING', (0, 0), (-1, -1), 13),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ]))
+        elements.append(member_table)
+
+    # Spacer after team members
+    elements.append(Spacer(1, 0.2*inch))
+
+    # University and session info at bottom
+    elements.append(Spacer(1, 0.8*inch))
+    elements.append(Paragraph(PROJECT_INFO['university'], styles['center']))
+    elements.append(Paragraph(PROJECT_INFO['academic_session'], styles['center']))
 
 def add_scope_changes(elements, styles):
     """Add section on changes in scope"""
@@ -418,7 +476,7 @@ def add_challenges_and_issues(elements, styles):
 
     ongoing_points = [
         """<b>Retrieval Accuracy:</b> Will be improved in Week 6-7 with re-ranking strategies and hybrid search combining dense and sparse retrieval methods. Expected improvement of 10-15% in MRR metrics.""",
-        """<b>Response Quality:</b> Will be enhanced with advanced prompting strategies including chain-of-thought, few-shot prompting, and self-consistency sampling to be implemented in Week 6-7.""",
+        """<b>Response Quality:</b> Will be enhanced with optimized prompt engineering and better context utilization to be implemented in Week 6-7.""",
         """<b>Performance Optimization:</b> Comprehensive performance profiling and optimization will be conducted in Week 8-9, focusing on latency reduction and resource efficiency.""",
         """<b>Scalability:</b> Load testing and stress testing will be performed in Week 8-9 to ensure system can handle concurrent users and large document collections."""
     ]
@@ -539,7 +597,7 @@ def add_next_steps(elements, styles):
 
     elements.append(Paragraph("4.7 Expected Outcomes", styles['subheading']))
 
-    outcomes = """By the end of Week 11, the project will deliver a fully functional RAG-based question answering system with advanced features including re-ranking, hybrid search, memory systems, and personalization. The system will be optimized for performance, thoroughly tested, well-documented, and ready for deployment. All objectives outlined in the project proposal will be achieved."""
+    outcomes = """By the end of Week 11, the project will deliver a fully functional RAG-based question answering system with advanced features including re-ranking, hybrid search, multi-document QA, context window management, and query rewriting/expansion. The system will be optimized for performance, thoroughly tested, well-documented, and ready for deployment. All objectives outlined in the project proposal will be achieved."""
     elements.append(Paragraph(outcomes, styles['normal']))
 
 def generate_report(output_filename="group10_interim_report.pdf"):
