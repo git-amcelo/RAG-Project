@@ -46,7 +46,9 @@ sys.path.insert(0, str(project_root))
 
 from src.model_config import ModelType, ModelSelector
 from src.embeddings import EmbeddingModel
+# LLM backend is selected at runtime via LLM_BACKEND env var
 from src.gemini_client import GeminiClient
+from src.ollama_client import OllamaClient
 
 
 @dataclass
@@ -85,23 +87,41 @@ class RAGChain:
         # Initialize embedding model
         self.embedding_model = EmbeddingModel(config.model_type.value)
 
-        # Initialize Gemini client with API key from environment
+        # ------------------------------------------------------------------
+        # LLM backend selection  (set LLM_BACKEND=ollama or gemini in .env)
+        # ------------------------------------------------------------------
         import os
-        api_key = os.getenv("GEMINI_API_KEY")
-        model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        backend = os.getenv("LLM_BACKEND", "gemini").strip().lower()
 
-        if api_key:
-            print(f"✓ Gemini API key found, using Google Gemini ({model_name})")
+        if backend == "ollama":
+            print("✓ Using local Ollama backend")
+            self.zai_client = OllamaClient(
+                temperature=config.temperature,
+                max_tokens=config.max_tokens,
+            )
         else:
-            print("⚠️  No GEMINI_API_KEY found, please set it in your .env file")
-            raise ValueError("Gemini API key required. Set GEMINI_API_KEY in .env.")
+            # Default: Google Gemini
+            api_key = os.getenv("GEMINI_API_KEY")
+            model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite")
 
-        self.zai_client = GeminiClient(
-            api_key=api_key,
-            model=model_name,
-            temperature=config.temperature,
-            max_tokens=config.max_tokens
-        )
+            if api_key:
+                print(f"✓ Gemini API key found, using Google Gemini ({model_name})")
+            else:
+                print("⚠️  No GEMINI_API_KEY found – falling back to Ollama")
+                backend = "ollama"
+
+            if backend == "ollama":
+                self.zai_client = OllamaClient(
+                    temperature=config.temperature,
+                    max_tokens=config.max_tokens,
+                )
+            else:
+                self.zai_client = GeminiClient(
+                    api_key=api_key,
+                    model=model_name,
+                    temperature=config.temperature,
+                    max_tokens=config.max_tokens,
+                )
 
 
         # Initialize memory (simplified version)
@@ -362,8 +382,8 @@ Answer:"""
                 chat_history=self.chat_history if use_memory else None
             )
         except Exception as e:
-            print(f"⚠️  Gemini generation failed: {e}")
-            answer = f"Error communicating with Gemini: {str(e)}"
+            print(f"⚠️  LLM generation failed: {e}")
+            answer = f"Error communicating with LLM backend: {str(e)}"
 
         # Update memory
         if use_memory:

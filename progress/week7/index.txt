@@ -1,0 +1,3 @@
+1. Used local llm to bypass the Gemini api payments.
+2. added a toggle for the local vs gemini model in .env
+
