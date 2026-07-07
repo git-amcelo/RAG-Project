@@ -49,6 +49,11 @@ from src.embeddings import EmbeddingModel
 # LLM backend is selected at runtime via LLM_BACKEND env var
 from src.gemini_client import GeminiClient
 from src.ollama_client import OllamaClient
+# Query expansion and context compression
+from src.query_expansion import QueryExpander
+from src.context_compression import ContextCompressor, CompressionConfig
+# Faithfulness evaluation
+from src.evaluation.faithfulness import FaithfulnessEvaluator
 
 
 @dataclass
@@ -60,6 +65,15 @@ class ChainConfig:
     chain_type: str = "stuff"  # stuff, map_reduce, refine
     k: int = 5  # Number of documents to retrieve
     memory_limit: int = 5  # Number of conversation turns to remember
+
+    # Query Expansion Settings
+    enable_query_expansion: bool = False  # Enable query expansion
+    num_expanded_queries: int = 3  # Number of expanded queries to generate
+
+    # Context Compression Settings
+    enable_context_compression: bool = False  # Enable context compression
+    max_context_tokens: int = 2000  # Max tokens for compressed context
+    similarity_threshold: float = 0.5  # Min similarity for chunks
 
 
 class RAGChain:
@@ -135,6 +149,34 @@ class RAGChain:
 
         # Custom prompt template
         self.prompt_template = self._create_prompt_template()
+
+        # ------------------------------------------------------------------
+        # Performance Optimization Caches (Week 8)
+        # ------------------------------------------------------------------
+        self.embedding_cache = {}  # Cache for query embeddings
+        self.context_cache = {}     # Cache for compressed contexts
+        self.expansion_cache = {}  # Cache for query expansion results
+        self.cache_hits = {"embedding": 0, "context": 0, "expansion": 0}
+        self.cache_misses = {"embedding": 0, "context": 0, "expansion": 0}
+
+        # ------------------------------------------------------------------
+        # Initialize Query Expansion and Context Compression
+        # ------------------------------------------------------------------
+        self.query_expander = None
+        self.context_compressor = None
+
+        if config.enable_query_expansion:
+            print("✓ Query expansion enabled")
+            # Initialize with the same LLM client
+            self.query_expander = QueryExpander(llm_client=self.zai_client)
+
+        if config.enable_context_compression:
+            print("✓ Context compression enabled")
+            compression_config = CompressionConfig(
+                max_tokens=config.max_context_tokens,
+                similarity_threshold=config.similarity_threshold
+            )
+            self.context_compressor = ContextCompressor(compression_config)
 
         print(f"✓ RAG Chain initialized")
         print(f"  Model: {config.model_type.value}")
@@ -253,47 +295,46 @@ Answer:"""
             query: Query string
 
         Returns:
-            List of relevant
+            List of relevant documents
         """
         if not self.vector_store or not self.vector_store.get("texts"):
             print("⚠️  No documents indexed. Use index_documents() first.")
             return []
 
         try:
-            # Simple retrieval using embedding similarity
-            texts = self.vector_store["texts"]
-            embeddings = self.vector_store["embeddings"]
-            metadatas = self.vector_store["metadatas"]
+            # ------------------------------------------------------------------
+            # Query Expansion: Generate alternative queries if enabled (with caching)
+            # ------------------------------------------------------------------
+            if self.query_expander:
+                print("Query expansion enabled - performing multi-query retrieval...")
 
-            if embeddings is not None:
-                # Encode query
-                query_embedding = self.embedding_model.encode(query, is_query=True)
+                # Check expansion cache
+                cache_key = f"exp_{query}"
+                if cache_key in self.expansion_cache:
+                    self.cache_hits["expansion"] += 1
+                    print(f"  Cache HIT for query expansion")
+                    return self.expansion_cache[cache_key]
+                else:
+                    self.cache_misses["expansion"] += 1
 
-                # Calculate similarities
-                import numpy as np
-                similarities = np.dot(embeddings, query_embedding)
+                expansion_result = self.query_expander.expand_and_retrieve(
+                    query=query,
+                    retriever_func=self._do_retrieval,
+                    k=self.config.k,
+                    deduplicate=True
+                )
 
-                # Get top-k results
-                k = min(self.config.k, len(similarities))
-                top_indices = np.argsort(similarities)[-k:][::-1]
+                print(f"Retrieved {expansion_result['total_retrieved']} total documents from {len(expansion_result['all_queries'])} queries")
+                print(f"After deduplication and re-ranking: {len(expansion_result['combined_documents'])} documents")
 
-                # Create result documents
-                docs = []
-                for idx in top_indices:
-                    docs.append({
-                        "page_content": texts[idx],
-                        "metadata": metadatas[idx],
-                        "score": float(similarities[idx])
-                    })
+                # Cache the result
+                self.expansion_cache[cache_key] = expansion_result['combined_documents']
 
-                print(f"Retrieved {len(docs)} documents for query")
-                return docs
+                return expansion_result['combined_documents']
+
             else:
-                # Return all documents as fallback
-                return [
-                    {"page_content": text, "metadata": meta}
-                    for text, meta in zip(texts, metadatas)
-                ]
+                # Standard single-query retrieval
+                return self._do_retrieval(query, k=self.config.k)
 
         except Exception as e:
             print(f"⚠️  Retrieval error: {e}")
@@ -305,18 +346,82 @@ Answer:"""
                 ]
             return [{"page_content": "Sample document content", "metadata": {"source": "test"}}]
 
-    def answer_question(self, question: str, use_memory: bool = True) -> Dict[str, Any]:
+    def _do_retrieval(self, query: str, k: int = 5) -> List[Dict]:
+        """
+        Perform actual vector retrieval for a single query
+
+        Args:
+            query: Query string
+            k: Number of documents to retrieve
+
+        Returns:
+            List of retrieved documents
+        """
+        if not self.vector_store or not self.vector_store.get("texts"):
+            return []
+
+        texts = self.vector_store["texts"]
+        embeddings = self.vector_store["embeddings"]
+        metadatas = self.vector_store["metadatas"]
+
+        if embeddings is not None:
+            # Check embedding cache
+            cache_key = f"emb_{query}"
+            if cache_key in self.embedding_cache:
+                query_embedding = self.embedding_cache[cache_key]
+                self.cache_hits["embedding"] += 1
+            else:
+                # Encode query
+                query_embedding = self.embedding_model.encode(query, is_query=True)
+                self.embedding_cache[cache_key] = query_embedding
+                self.cache_misses["embedding"] += 1
+
+            # Calculate similarities
+            import numpy as np
+            similarities = np.dot(embeddings, query_embedding)
+
+            # Get top-k results
+            k = min(k, len(similarities))
+            top_indices = np.argsort(similarities)[-k:][::-1]
+
+            # Create result documents
+            docs = []
+            for idx in top_indices:
+                docs.append({
+                    "page_content": texts[idx],
+                    "metadata": metadatas[idx],
+                    "score": float(similarities[idx])
+                })
+
+            return docs
+        else:
+            # Return all documents as fallback
+            return [
+                {"page_content": text, "metadata": meta}
+                for text, meta in zip(texts, metadatas)
+            ]
+
+    def answer_question(
+        self,
+        question: str,
+        use_memory: bool = True,
+        evaluate_faithfulness: bool = False
+    ) -> Dict[str, Any]:
         """
         Answer a question using RAG
 
         Args:
             question: User question
             use_memory: Whether to use conversation memory
+            evaluate_faithfulness: Whether to evaluate answer faithfulness (Week 8)
 
         Returns:
             Answer dictionary with response and metadata
         """
         start_time = time.time()
+
+        # Timing breakdown
+        timing = {}
 
         # Initialize result structure
         result = {
@@ -325,21 +430,73 @@ Answer:"""
             "source_documents": [],
             "processing_time": 0,
             "model_used": self.config.model_type.value,
-            "num_documents_retrieved": 0
+            "num_documents_retrieved": 0,
+            "query_expansion_used": self.config.enable_query_expansion,
+            "context_compression_used": self.config.enable_context_compression,
+            "timing_breakdown": {},
+            "faithfulness": None
         }
 
         # Retrieve relevant documents
+        retrieval_start = time.time()
         docs = self.retrieve_documents(question)
+        timing["retrieval_time"] = time.time() - retrieval_start
 
         if not docs:
             result["answer"] = "I don't have any documents to search through. Please upload some documents first."
             result["processing_time"] = time.time() - start_time
             return result
 
+        # ------------------------------------------------------------------
+        # Context Compression: Filter and prune retrieved chunks (with caching)
+        # ------------------------------------------------------------------
+        original_doc_count = len(docs)
+        compression_start = time.time()
+
+        # Create cache key from document IDs (first 100 chars of first doc as simple hash)
+        doc_hash = str(hash(str(docs[:2]))) if docs else "empty"
+
+        if self.context_compressor:
+            print("Context compression enabled - compressing retrieved chunks...")
+
+            # Check context cache
+            cache_key = f"ctx_{doc_hash}"
+            if cache_key in self.context_cache:
+                self.cache_hits["context"] += 1
+                cached_result = self.context_cache[cache_key]
+                docs = cached_result["docs"]
+                timing["compression_time"] = time.time() - compression_start
+                print(f"  Cache HIT for context compression")
+                print(f"Compressed {original_doc_count} → {len(docs)} chunks (cached)")
+                result["compression_ratio"] = cached_result["compression_ratio"]
+                result["original_doc_count"] = original_doc_count
+            else:
+                self.cache_misses["context"] += 1
+                compression_result = self.context_compressor.compress(docs)
+
+                docs = compression_result.compressed_chunks
+                timing["compression_time"] = time.time() - compression_start
+                print(f"Compressed {original_doc_count} → {len(docs)} chunks")
+                print(f"Tokens removed: {compression_result.tokens_removed}")
+
+                result["compression_ratio"] = compression_result.compression_ratio
+                result["original_doc_count"] = original_doc_count
+
+                # Cache the compressed result
+                self.context_cache[cache_key] = {
+                    "docs": docs,
+                    "compression_ratio": compression_result.compression_ratio
+                }
+        else:
+            timing["compression_time"] = 0.0
+
         # Build context from retrieved documents
-        context = "\n\n".join([
-            doc.get("page_content", str(doc)) for doc in docs
-        ])
+        if self.context_compressor:
+            context = self.context_compressor.format_compressed_context(docs)
+        else:
+            context = "\n\n".join([
+                doc.get("page_content", str(doc)) for doc in docs
+            ])
 
         # Populate result with source documents
         result["source_documents"] = [
@@ -374,7 +531,8 @@ Answer:"""
             )
 
 
-        # Generate answer using Gemini with context
+        # Generate answer using LLM with context
+        generation_start = time.time()
         try:
             answer = self.zai_client.generate_with_context(
                 context=context,
@@ -384,6 +542,32 @@ Answer:"""
         except Exception as e:
             print(f"⚠️  LLM generation failed: {e}")
             answer = f"Error communicating with LLM backend: {str(e)}"
+        timing["generation_time"] = time.time() - generation_start
+
+        # ------------------------------------------------------------------
+        # Faithfulness Evaluation (Week 8): Optional LLM-as-judge
+        # ------------------------------------------------------------------
+        faithfulness_result = None
+        if evaluate_faithfulness and docs and answer:
+            try:
+                print("Running faithfulness evaluation...")
+                evaluator = FaithfulnessEvaluator()
+                faithfulness_result = evaluator.evaluate(
+                    context=context,
+                    question=question,
+                    answer=answer,
+                    detect_hallucinations=True
+                )
+                timing["faithfulness_time"] = faithfulness_result["evaluation_time"]
+                print(f"  Faithfulness Score: {faithfulness_result['score']:.2f}")
+                print(f"  Is Faithful: {faithfulness_result['is_faithful']}")
+                if faithfulness_result['hallucinations']:
+                    print(f"  Hallucinations: {faithfulness_result['hallucinations']}")
+            except Exception as e:
+                print(f"⚠️  Faithfulness evaluation failed: {e}")
+                timing["faithfulness_time"] = 0.0
+        else:
+            timing["faithfulness_time"] = 0.0
 
         # Update memory
         if use_memory:
@@ -404,8 +588,32 @@ Answer:"""
             ],
             "processing_time": processing_time,
             "model_used": self.config.model_type.value,
-            "num_documents_retrieved": len(docs)
+            "num_documents_retrieved": len(docs),
+            "query_expansion_used": self.config.enable_query_expansion,
+            "context_compression_used": self.config.enable_context_compression,
+            "timing_breakdown": timing
         }
+
+        # Add faithfulness results if evaluation was performed
+        if faithfulness_result:
+            result["faithfulness"] = {
+                "score": faithfulness_result["score"],
+                "is_faithful": faithfulness_result["is_faithful"],
+                "hallucinations": faithfulness_result["hallucinations"],
+                "reason": faithfulness_result.get("reason", "")
+            }
+        else:
+            result["faithfulness"] = None
+
+        # Add compression metadata if applicable
+        if self.context_compressor:
+            result["compression_ratio"] = getattr(
+                self.context_compressor.compress(
+                    self.retrieve_documents(question) if not self.query_expander else docs
+                ),
+                "compression_ratio",
+                0
+            )
 
         return result
 
@@ -451,18 +659,56 @@ Answer:"""
         """Get RAG chain statistics"""
         llm_stats = self.zai_client.get_stats()
 
+        # Calculate cache hit rates
+        embedding_total = self.cache_hits["embedding"] + self.cache_misses["embedding"]
+        context_total = self.cache_hits["context"] + self.cache_misses["context"]
+        expansion_total = self.cache_hits["expansion"] + self.cache_misses["expansion"]
+
         return {
             "config": {
                 "model": self.config.model_type.value,
                 "temperature": self.config.temperature,
                 "max_tokens": self.config.max_tokens,
                 "chain_type": self.config.chain_type,
-                "k": self.config.k
+                "k": self.config.k,
+                "query_expansion_enabled": self.config.enable_query_expansion,
+                "context_compression_enabled": self.config.enable_context_compression,
+                "max_context_tokens": self.config.max_context_tokens,
+                "similarity_threshold": self.config.similarity_threshold
             },
             "llm_stats": llm_stats,
             "memory_messages": len(self.chat_history),
-            "documents_indexed": len(self.vector_store.get("texts", [])) if self.vector_store else 0
+            "documents_indexed": len(self.vector_store.get("texts", [])) if self.vector_store else 0,
+            "cache_stats": {
+                "embedding_cache": {
+                    "hits": self.cache_hits["embedding"],
+                    "misses": self.cache_misses["embedding"],
+                    "hit_rate": self.cache_hits["embedding"] / max(embedding_total, 1),
+                    "size": len(self.embedding_cache)
+                },
+                "context_cache": {
+                    "hits": self.cache_hits["context"],
+                    "misses": self.cache_misses["context"],
+                    "hit_rate": self.cache_hits["context"] / max(context_total, 1),
+                    "size": len(self.context_cache)
+                },
+                "expansion_cache": {
+                    "hits": self.cache_hits["expansion"],
+                    "misses": self.cache_misses["expansion"],
+                    "hit_rate": self.cache_hits["expansion"] / max(expansion_total, 1),
+                    "size": len(self.expansion_cache)
+                }
+            }
         }
+
+    def clear_caches(self) -> None:
+        """Clear all performance caches"""
+        self.embedding_cache.clear()
+        self.context_cache.clear()
+        self.expansion_cache.clear()
+        self.cache_hits = {"embedding": 0, "context": 0, "expansion": 0}
+        self.cache_misses = {"embedding": 0, "context": 0, "expansion": 0}
+        print("✓ All caches cleared")
 
 
 def main():

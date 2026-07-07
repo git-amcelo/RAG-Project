@@ -115,44 +115,6 @@ def mrr(retrieved_ids: List[str], relevant_ids: List[str]) -> float:
     return 0.0
 
 
-def ndcg_at_k(retrieved_ids: List[str],
-              relevant_ids: List[str],
-              relevance_scores: Dict[str, float] = None,
-              k: int = 10) -> float:
-    """
-    Calculate Normalized Discounted Cumulative Gain (NDCG@K)
-
-    NDCG measures ranking quality with graded relevance
-
-    Args:
-        retrieved_ids: List of retrieved document IDs (ordered by rank)
-        relevant_ids: List of relevant document IDs
-        relevance_scores: Optional dict mapping doc_id to relevance score
-        k: Cut-off rank
-
-    Returns:
-        NDCG@K score (0 to 1)
-    """
-    # Default binary relevance
-    if relevance_scores is None:
-        relevance_scores = {doc_id: 1.0 for doc_id in relevant_ids}
-
-    # DCG calculation
-    dcg = 0.0
-    for i in range(min(k, len(retrieved_ids))):
-        doc_id = retrieved_ids[i]
-        rel = relevance_scores.get(doc_id, 0.0)
-        dcg += rel / np.log2(i + 2)  # +2 because log2(1) = 0
-
-    # Ideal DCG (perfect ranking)
-    ideal_relevances = sorted(
-        [relevance_scores.get(doc_id, 0.0) for doc_id in relevant_ids],
-        reverse=True
-    )
-    idcg = sum(rel / np.log2(i + 2) for i, rel in enumerate(ideal_relevances[:k]))
-
-    return dcg / idcg if idcg > 0 else 0.0
-
 
 def hit_rate_at_k(retrieved_ids: List[str], relevant_ids: List[str], k: int) -> float:
     """
@@ -202,8 +164,7 @@ class RetrievalEvaluator:
             "precision": {k: [] for k in self.k_values},
             "hit_rate": {k: [] for k in self.k_values},
             "ap": [],
-            "mrr": [],
-            "ndcg": {k: [] for k in self.k_values}
+            "mrr": []
         }
         self.query_count = 0
 
@@ -252,12 +213,6 @@ class RetrievalEvaluator:
         self.results["mrr"].append(mrr_score)
         query_metrics["mrr"] = mrr_score
 
-        # NDCG@K
-        for k in self.k_values:
-            ndcg = ndcg_at_k(retrieved_ids, relevant_ids, relevance_scores, k)
-            self.results["ndcg"][k].append(ndcg)
-            query_metrics[f"ndcg@{k}"] = ndcg
-
         self.query_count += 1
         return query_metrics
 
@@ -277,7 +232,6 @@ class RetrievalEvaluator:
             mean_metrics[f"recall@{k}"] = np.mean(self.results["recall"][k])
             mean_metrics[f"precision@{k}"] = np.mean(self.results["precision"][k])
             mean_metrics[f"hit_rate@{k}"] = np.mean(self.results["hit_rate"][k])
-            mean_metrics[f"ndcg@{k}"] = np.mean(self.results["ndcg"][k])
 
         mean_metrics["map"] = np.mean(self.results["ap"])
         mean_metrics["mrr"] = np.mean(self.results["mrr"])
@@ -295,7 +249,6 @@ class RetrievalEvaluator:
             std_metrics[f"recall@{k}"] = np.std(self.results["recall"][k])
             std_metrics[f"precision@{k}"] = np.std(self.results["precision"][k])
             std_metrics[f"hit_rate@{k}"] = np.std(self.results["hit_rate"][k])
-            std_metrics[f"ndcg@{k}"] = np.std(self.results["ndcg"][k])
 
         std_metrics["map"] = np.std(self.results["ap"])
         std_metrics["mrr"] = np.std(self.results["mrr"])
@@ -321,10 +274,6 @@ class RetrievalEvaluator:
         print("\nOther Metrics:")
         print(f"  MRR: {mean.get('mrr', 0):.4f}")
         print(f"  MAP: {mean.get('map', 0):.4f}")
-
-        print("\nNDCG@K:")
-        for k in self.k_values:
-            print(f"  NDCG@{k}: {mean.get(f'ndcg@{k}', 0):.4f}")
 
 
 def evaluate_retriever(retriever,
@@ -449,7 +398,6 @@ def main():
     print(f"Recall@5: {recall_at_k(retrieved, relevant, 5):.4f}")
     print(f"Precision@5: {precision_at_k(retrieved, relevant, 5):.4f}")
     print(f"MRR: {mrr(retrieved, relevant):.4f}")
-    print(f"NDCG@5: {ndcg_at_k(retrieved, relevant, k=5):.4f}")
 
     # Test evaluator
     print("\n--- Testing RetrievalEvaluator ---")

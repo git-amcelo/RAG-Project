@@ -60,6 +60,10 @@ class OllamaClient:
         # Verify Ollama is reachable
         self._check_connection()
 
+        # Initialize prompt optimizer
+        from src.optimization.prompt_optimizer import PromptOptimizer
+        self.prompt_optimizer = PromptOptimizer()
+
         print("✓ Ollama client initialized")
         print(f"  Model : {self.model_name}")
         print(f"  URL   : {self.base_url}")
@@ -200,7 +204,9 @@ class OllamaClient:
             "Answer:"
         )
 
-        return self.generate(prompt)
+        # Optimize prompt for token efficiency before sending to Ollama
+        optimized_prompt, _ = self.prompt_optimizer.optimize_prompt(prompt, aggressive=True)
+        return self.generate(optimized_prompt)
 
     # ------------------------------------------------------------------
     # Statistics (matches GeminiClient interface)

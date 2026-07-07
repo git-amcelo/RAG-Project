@@ -35,6 +35,9 @@ class ChatRequest(BaseModel):
     message: str = Field(..., description="User message")
     use_memory: bool = Field(True, description="Use conversation memory")
     model_preference: Optional[str] = Field(None, description="Model preference (bge-small or e5-base)")
+    enable_query_expansion: bool = Field(False, description="Enable query expansion")
+    enable_context_compression: bool = Field(False, description="Enable context compression")
+    evaluate_faithfulness: bool = Field(False, description="Enable faithfulness evaluation (Week 8)")
 
 class ChatResponse(BaseModel):
     """Response model for chat endpoint"""
@@ -44,6 +47,8 @@ class ChatResponse(BaseModel):
     processing_time: float
     model_used: str
     num_documents_retrieved: int
+    timing_breakdown: Optional[Dict[str, float]] = Field(None, description="Timing breakdown for each stage")
+    faithfulness: Optional[Dict[str, Any]] = Field(None, description="Faithfulness evaluation results")
 
 class DocumentInfo(BaseModel):
     """Document information model"""
@@ -69,6 +74,50 @@ class HealthResponse(BaseModel):
     models_loaded: List[str]
     documents_processed: int
     uptime: str
+    cache_stats: Optional[Dict[str, Any]] = Field(None, description="Cache statistics (Week 8)")
+
+
+class EvaluateRequest(BaseModel):
+    """Request model for faithfulness evaluation"""
+    context: str = Field(..., description="Retrieved document context")
+    question: str = Field(..., description="User question")
+    answer: str = Field(..., description="Generated answer to evaluate")
+    detect_hallucinations: bool = Field(True, description="Detect hallucinations")
+
+class EvaluateResponse(BaseModel):
+    """Response model for faithfulness evaluation"""
+    score: float
+    is_faithful: bool
+    reason: str
+    hallucinations: List[str]
+    evaluation_time: float
+
+
+class PerformanceMetrics(BaseModel):
+    """Performance metrics for comparison"""
+    recall_at_1: float
+    recall_at_5: float
+    recall_at_10: float
+    precision_at_5: float
+    mrr: float
+    map_score: float
+    avg_retrieval_time: float
+    avg_generation_time: float
+    avg_total_time: float
+    avg_total_tokens: int
+    faithfulness_score: float
+    faithful_rate: float
+    cache_hit_rate: float
+
+
+class PerformanceResponse(BaseModel):
+    """Response model for performance endpoint"""
+    timestamp: str
+    config: Dict[str, Any]
+    llm_stats: Dict[str, Any]
+    memory_messages: int
+    documents_indexed: int
+    cache_stats: Dict[str, Any]
 
 
 # Initialize FastAPI app
@@ -153,7 +202,7 @@ async def health_check():
     """
     Health check endpoint
 
-    Returns API status and statistics
+    Returns API status and statistics including cache stats (Week 8)
     """
     import time
 
@@ -161,12 +210,20 @@ async def health_check():
     documents = document_processor.list_processed_documents() if document_processor else []
     models_loaded = list(rag_chains.keys())
 
+    # Get cache stats from active chain
+    cache_stats = None
+    active_chain = rag_chains.get(active_model)
+    if active_chain:
+        stats = active_chain.get_stats()
+        cache_stats = stats.get("cache_stats", {})
+
     return HealthResponse(
         status="healthy",
         version="1.0.0",
         models_loaded=[model.value for model in models_loaded],
         documents_processed=len(documents),
-        uptime=f"{int(time.time())}s"  # Simplified uptime
+        uptime=f"{int(time.time())}s",  # Simplified uptime
+        cache_stats=cache_stats
     )
 
 
@@ -235,7 +292,7 @@ async def chat(request: ChatRequest):
     """
     Chat endpoint for question answering
 
-    Supports conversation memory and model selection
+    Supports conversation memory, model selection, query expansion, context compression, and faithfulness evaluation (Week 8)
     """
     # Get model to use
     model_to_use = active_model
@@ -246,17 +303,27 @@ async def chat(request: ChatRequest):
         elif request.model_preference == "bge-small":
             model_to_use = ModelType.BGE_SMALL
 
-    # Get RAG chain
-    if model_to_use not in rag_chains:
-        raise HTTPException(status_code=503, detail=f"Model {model_to_use.value} not available")
+    # Create or get RAG chain with current settings
+    chain_key = f"{model_to_use.value}_qe{request.enable_query_expansion}_cc{request.enable_context_compression}"
 
-    rag_chain = rag_chains[model_to_use]
+    if chain_key not in rag_chains:
+        # Create new chain with specific settings
+        config = ChainConfig(
+            model_type=model_to_use,
+            enable_query_expansion=request.enable_query_expansion,
+            enable_context_compression=request.enable_context_compression
+        )
+        rag_chains[chain_key] = RAGChain(config)
+        print(f"✓ Created new RAG chain: {chain_key}")
+
+    rag_chain = rag_chains[chain_key]
 
     try:
-        # Get response
+        # Get response with optional faithfulness evaluation
         result = rag_chain.answer_question(
             request.message,
-            use_memory=request.use_memory
+            use_memory=request.use_memory,
+            evaluate_faithfulness=request.evaluate_faithfulness
         )
 
         return ChatResponse(
@@ -265,11 +332,71 @@ async def chat(request: ChatRequest):
             sources=result["source_documents"],
             processing_time=result["processing_time"],
             model_used=result["model_used"],
-            num_documents_retrieved=result["num_documents_retrieved"]
+            num_documents_retrieved=result["num_documents_retrieved"],
+            timing_breakdown=result.get("timing_breakdown"),
+            faithfulness=result.get("faithfulness")
         )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+
+
+@app.post("/evaluate", response_model=EvaluateResponse)
+async def evaluate_faithfulness(request: EvaluateRequest):
+    """
+    Faithfulness evaluation endpoint (Week 8)
+
+    Evaluates whether an answer is faithful to the provided context
+    """
+    from src.evaluation.faithfulness import FaithfulnessEvaluator
+
+    try:
+        evaluator = FaithfulnessEvaluator()
+        result = evaluator.evaluate(
+            context=request.context,
+            question=request.question,
+            answer=request.answer,
+            detect_hallucinations=request.detect_hallucinations
+        )
+
+        return EvaluateResponse(
+            score=result["score"],
+            is_faithful=result["is_faithful"],
+            reason=result.get("reason", ""),
+            hallucinations=result["hallucinations"],
+            evaluation_time=result["evaluation_time"]
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Evaluation failed: {str(e)}")
+
+
+@app.get("/performance", response_model=PerformanceResponse)
+async def get_performance():
+    """
+    Performance metrics endpoint (Week 8)
+
+    Returns system performance metrics including cache statistics
+    """
+    # Get the active RAG chain
+    active_chain = rag_chains.get(active_model)
+    if not active_chain:
+        raise HTTPException(status_code=503, detail="RAG chain not ready")
+
+    try:
+        stats = active_chain.get_stats()
+
+        return PerformanceResponse(
+            timestamp=stats.get("timestamp", ""),
+            config=stats.get("config", {}),
+            llm_stats=stats.get("llm_stats", {}),
+            memory_messages=stats.get("memory_messages", 0),
+            documents_indexed=stats.get("documents_indexed", 0),
+            cache_stats=stats.get("cache_stats", {})
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get performance: {str(e)}")
 
 
 @app.get("/documents", response_model=List[DocumentInfo])
@@ -395,10 +522,33 @@ async def switch_model(model_name: str):
 
     try:
         active_model = new_model
+        new_chain = rag_chains[active_model]
+
+        # Re-run parsing and indexing for all processed documents
+        if document_processor:
+            documents = document_processor.list_processed_documents()
+            for doc in documents:
+                file_name = doc.get("file_name")
+                doc_id = doc.get("document_id")
+                original_file_path = document_processor.upload_dir / file_name
+
+                if original_file_path.exists():
+                    print(f"Re-parsing & indexing: {file_name}")
+                    result = document_processor.process_document(str(original_file_path), document_id=doc_id)
+                    if result["success"]:
+                        document_processor.save_processed_document(result)
+                        new_chain.index_documents(result["chunks"])
+                else:
+                    # Fallback: if source file is missing, re-index from saved JSON chunks
+                    print(f"Source file not found, re-indexing from JSON cache: {file_name}")
+                    full_doc = document_processor.get_processed_document(doc_id)
+                    if full_doc and "chunks" in full_doc:
+                        new_chain.index_documents(full_doc["chunks"])
+
         return {
             "success": True,
             "active_model": active_model.value,
-            "message": f"Switched to {active_model.value}"
+            "message": f"Switched to {active_model.value} and successfully re-indexed documents"
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Switch failed: {str(e)}")

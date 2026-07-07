@@ -1170,6 +1170,10 @@
           </button>
         </div>
         <div class="chat-input-meta">
+          <label class="eval-toggle" style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-size:0.65rem;font-family:var(--font-mono);">
+            <input type="checkbox" id="faithfulnessToggle" style="width:14px;height:14px;">
+            <span>Evaluate Faithfulness</span>
+          </label>
           <span class="char-count" id="charCount">0 / 2000</span>
         </div>
       </div>
@@ -1699,12 +1703,17 @@
       const requestBody = {
         message: text,
         model_preference: selectedModel,
-        // Advanced settings
+        use_memory: true,
+        // Query Expansion and Context Compression
+        enable_query_expansion: settings.queryExpansionEnabled,
+        enable_context_compression: settings.contextCompression,
+        // Week 8: Faithfulness Evaluation
+        evaluate_faithfulness: document.getElementById('faithfulnessToggle').checked,
+        // Legacy advanced settings (for future use)
         fusion_strategy: settings.fusionStrategy,
         fusion_alpha: parseFloat(settings.fusionAlpha),
         reranking_enabled: settings.rerankingEnabled,
         rerank_top_k: settings.rerankTopK,
-        query_expansion_enabled: settings.queryExpansionEnabled,
         chunk_size: settings.chunkSize,
         chunk_overlap: settings.chunkOverlap
       };
@@ -1720,16 +1729,19 @@
       const latency = ((performance.now() - t0) / 1000).toFixed(2);
       document.getElementById('statLatency').textContent = latency + 's';
 
-      // Week 6/7: Update metrics if available
-      if (data.metrics) {
-        document.getElementById('statRecall').textContent = data.metrics.recall_at_5 || '—';
-        document.getElementById('statMRR').textContent = data.metrics.mrr || '—';
-      }
+      // Week 6/7: Update metrics if available, otherwise display active model baseline metrics
+      const baselineMetrics = {
+        'bge-small': { recall: '0.743', mrr: '0.701' },
+        'e5-base': { recall: '0.780', mrr: '0.720' }
+      };
+      const modelMetrics = (data.metrics && data.metrics.recall_at_5) ? data.metrics : baselineMetrics[selectedModel];
+      document.getElementById('statRecall').textContent = modelMetrics.recall_at_5 || modelMetrics.recall || '—';
+      document.getElementById('statMRR').textContent = modelMetrics.mrr || '—';
 
       // Update metrics panel
       updateMetricsPanel(data, latency);
 
-      addMessage('assistant', data.answer, data.sources, data.retrieval_info);
+      addMessage('assistant', data.answer, data.sources, data.retrieval_info, data.faithfulness, data.timing_breakdown);
     } catch (e) {
       addMessage('assistant', '⚠ ' + e.message);
     } finally {
@@ -1741,29 +1753,44 @@
   function updateMetricsPanel(data, latency) {
     const panelBody = document.getElementById('metricsPanelBody');
 
-    // Simulated metrics for demo (in production, these come from backend)
-    const recall = (0.7 + Math.random() * 0.15).toFixed(3);
-    const mrr = (0.6 + Math.random() * 0.15).toFixed(3);
-    const precision = (0.75 + Math.random() * 0.15).toFixed(3);
+    // Timing breakdown (Week 8)
+    const timing = data.timing_breakdown || {};
+    const retrievalTime = timing.retrieval_time ? (timing.retrieval_time * 1000).toFixed(0) + 'ms' : '—';
+    const generationTime = timing.generation_time ? (timing.generation_time * 1000).toFixed(0) + 'ms' : '—';
+    const faithfulnessTime = timing.faithfulness_time ? (timing.faithfulness_time * 1000).toFixed(0) + 'ms' : '—';
+
+    // Faithfulness (Week 8)
+    const faithScore = data.faithfulness ? (data.faithfulness.score * 100).toFixed(0) + '%' : '—';
+    const faithStatus = data.faithfulness ? (data.faithfulness.is_faithful ? '✓' : '⚠') : '—';
 
     panelBody.innerHTML = `
       <div style="margin-bottom:1rem;">
         <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.5rem;">Last Query Metrics</div>
         <div class="settings-row">
-          <span class="settings-label">Latency</span>
+          <span class="settings-label">Total Latency</span>
           <span class="slider-value" style="color:var(--red);">${latency}s</span>
         </div>
-        <div class="settings-row">
-          <span class="settings-label">Recall@5</span>
-          <span class="slider-value">${recall}</span>
+        <div style="margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid var(--border);">
+          <div style="font-size:0.65rem;color:var(--mid);margin-bottom:0.3rem;">TIMING BREAKDOWN</div>
+          <div class="settings-row">
+            <span class="settings-label">Retrieval</span>
+            <span class="slider-value">${retrievalTime}</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Generation</span>
+            <span class="slider-value">${generationTime}</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Evaluation</span>
+            <span class="slider-value">${faithfulnessTime}</span>
+          </div>
         </div>
-        <div class="settings-row">
-          <span class="settings-label">MRR</span>
-          <span class="slider-value">${mrr}</span>
-        </div>
-        <div class="settings-row">
-          <span class="settings-label">Precision@5</span>
-          <span class="slider-value">${precision}</span>
+        <div style="margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid var(--border);">
+          <div style="font-size:0.65rem;color:var(--mid);margin-bottom:0.3rem;">ANSWER QUALITY</div>
+          <div class="settings-row">
+            <span class="settings-label">Faithfulness</span>
+            <span class="slider-value">${faithScore} ${faithStatus}</span>
+          </div>
         </div>
       </div>
       <button class="compare-btn" onclick="openPerfModal()">View Performance Comparison</button>
@@ -1772,7 +1799,7 @@
 
 
 
-  function addMessage(role, text, sources = null, retrievalInfo = null) {
+  function addMessage(role, text, sources = null, retrievalInfo = null, faithfulness = null, timing = null) {
     messageCount++;
     document.getElementById('statMessages').textContent = messageCount;
     const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -1793,6 +1820,24 @@
       bubble.innerHTML = marked.parse(text);
     } else {
       bubble.textContent = text;
+    }
+
+    // Week 8: Display faithfulness results
+    if (faithfulness && role === 'assistant') {
+      const faithDiv = document.createElement('div');
+      faithDiv.className = 'msg-faithfulness';
+      const scoreClass = faithfulness.is_faithful ? 'faithful' : 'unfaithful';
+      const scoreColor = faithfulness.is_faithful ? 'color:#2e7d32;' : 'color:#c62828;';
+      faithDiv.innerHTML = `
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;padding:0.4rem 0.6rem;background:rgba(0,0,0,0.03);border-radius:0.5rem;font-size:0.65rem;font-family:var(--font-mono);">
+          <span style="font-weight:600;">Faithfulness:</span>
+          <span style="${scoreColor}font-weight:700;">${(faithfulness.score * 100).toFixed(0)}%</span>
+          <span style="color:var(--mid);">•</span>
+          <span style="${faithfulness.is_faithful ? 'color:#2e7d32;' : 'color:#c62828;'}">${faithfulness.is_faithful ? '✓ Faithful' : '⚠ Unfaithful'}</span>
+          ${faithfulness.hallucinations && faithfulness.hallucinations.length > 0 ? `<span style="color:var(--mid);margin-left:0.5rem;">• ${faithfulness.hallucinations.length} hallucination(s)</span>` : ''}
+        </div>
+      `;
+      bubble.appendChild(faithDiv);
     }
 
     // Week 6/7: Enhanced source attribution with ranking details
