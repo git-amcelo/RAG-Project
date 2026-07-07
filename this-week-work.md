@@ -50,7 +50,6 @@ According to the RAG Project Guideline, Week 9 focuses on **Phase 8: Analysis**.
 
 ### Completed Work:
 - ✅ **Performance Optimization**: Addressed latency bottlenecks by integrating the `PromptOptimizer` inside the local Ollama LLM client.
-- ✅ **Dynamic Re-Vectorizing**: Implemented automatic re-parsing and re-vectorizing of documents upon embedding model switches.
 - ✅ **Faithfulness Evaluation**: Integrated the `FaithfulnessEvaluator` to measure LLM grounding scores and check for hallucinations.
 - ✅ **UI Enhancements**: Added model baseline metrics (Recall@5 and MRR) and timing/faithfulness check indicators directly into the chat stats bar.
 - ✅ **Evaluation Framework**: Verified standard metrics (Recall, Precision, MRR) calculations using automated test runners.
