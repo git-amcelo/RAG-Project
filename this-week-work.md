@@ -1,4 +1,4 @@
-# Week 9 Work - Analysis & Documentation - Part 1
+# Week 10 Work - Final Submission
 
 ## Current Status
 
@@ -9,57 +9,66 @@ Based on the progress folder, the project has completed:
 - ✅ Week 6: Hybrid Retrieval & Advanced Features
 - ✅ Week 7: Optimization & Evaluation - Part 1 (Profiling)
 - ✅ Week 8: Evaluation & Performance Optimization - Part 2 (Integrated prompt optimizer, faithfulness evaluation, and active model re-parsing/re-vectorization)
+- ✅ Week 9: Analysis & Documentation - Part 1 (Failure analysis, categorized failure modes, analysis figures, and pipeline/API documentation)
 
-**Current Week: Week 9**
-
----
-
-## Week 9: Analysis & Documentation - Part 1 (July 23-29, 2026)
-
-According to the RAG Project Guideline, Week 9 focuses on **Phase 8: Analysis**. The main objective is to analyze failed retrieval cases, categorize failure modes, and prepare analysis figures and visualizations for the final report.
-
-### Week 9 Scope & Objectives
-
-#### 1. Failure Analysis (Priority: High)
-- **Gather Retrieval Failures**: Extract queries from SQuAD v2 and MS MARCO benchmarks where retrieval metrics (Recall/MRR) were low.
-- **Categorize Failure Modes**: Identify why retrieval failed (e.g., semantic drift, complex query structures, out-of-vocabulary terms, or poor chunk boundaries).
-- **Generate Analysis Figures**: Create data visualizations (e.g., charts, confusion matrices, or histograms) demonstrating the types of failures and quality distributions.
-
-#### 2. Documentation (Priority: Medium)
-- **Code & API Documentation**: Document the RAG core pipeline, the model switching API logic, the prompt optimizer, and the faithfulness evaluator.
+**Current Week: Week 10**
 
 ---
 
-## Week 9 Deliverables
+## Week 10: Final Submission (July 30 - August 5, 2026)
+
+According to the RAG Project Guideline, Week 10 focuses on **Phase 9: Final Submission**. The main objective is to consolidate all work from Weeks 1-9 into the final deliverables: the IEEE-style report and the presentation slides.
+
+### Week 10 Scope & Objectives
+
+#### 1. IEEE-Style Final Report (Priority: High)
+- **Draft the full report** in IEEE two-column format, targeting 6-8 pages, with the required sections: Abstract, Introduction, Related Work, Methodology, Experimental Setup, Results and Discussion, Conclusion, References.
+- **Methodology section**: Describe the hybrid retrieval architecture (dense + BM25), embedding model comparison (BGE/E5/SentenceTransformers), reranking/query expansion, chunk optimization, and context compression as the core contributions.
+- **Results and Discussion section**: Incorporate the Week 9 failure analysis, evaluation tables (Recall@K, Precision@K, MRR, Faithfulness) from Week 8, and the analysis figures/visualizations.
+- **References**: Compile citations from the Week 1-2 literature summary.
+
+#### 2. Final Presentation Slides (Priority: High)
+- **Build the slide deck** summarizing motivation, system architecture, methodology, experiments, results, and conclusions.
+- **Include key visuals**: embedding comparison charts, retrieval metric tables, and failure-mode figures from Week 9.
+- **Prepare a live/recorded walkthrough** of the working RAG system for the demo.
+
+#### 3. Final Deliverables Package Assembly (Priority: Medium)
+- **Consolidate experimental results** into final performance tables and comparison graphs.
+- **Package visualization assets** (retrieval and embedding analysis).
+- **Verify against the guideline's Expected Final Deliverables checklist**: Source Code, Working RAG System, Experimental Results, Visualization, Final Presentation, IEEE-Style Final Report.
+
+---
+
+## Week 10 Deliverables
 
 ### Technical Deliverables
-- **Analysis Figures**: Plots and charts illustrating retrieval failure categories and performance metrics (as required by Phase 8 of the RAG Project Guideline).
-- **Failure Analysis Log**: Detailed breakdown of sample queries, showing what was retrieved versus what was expected.
+- **IEEE-Style Final Report**: Draft covering all required sections, 6-8 pages, two-column format.
+- **Final Presentation Slides**: Deck summarizing the project for the final demo.
+- **Consolidated Experimental Results**: Final performance tables and comparison graphs.
 
 ---
 
-## Success Criteria for Week 9
+## Success Criteria for Week 10
 
-- [ ] Retrieval failures identified, extracted, and categorized.
-- [ ] Visualizations/figures representing failure modes generated and saved.
-- [ ] System architecture and API endpoints fully documented.
+- [ ] Final report drafted covering all required IEEE sections (Abstract through References).
+- [ ] Presentation slides created with key results and visualizations included.
+- [ ] Source code cleaned, organized, and documentation verified as complete.
+- [ ] All expected final deliverables assembled and checked against the guideline's checklist.
 
 ---
 
-## Week 8 Archive (Completed)
+## Week 9 Archive (Completed)
 
 ### Completed Work:
-- ✅ **Performance Optimization**: Addressed latency bottlenecks by integrating the `PromptOptimizer` inside the local Ollama LLM client.
-- ✅ **Faithfulness Evaluation**: Integrated the `FaithfulnessEvaluator` to measure LLM grounding scores and check for hallucinations.
-- ✅ **UI Enhancements**: Added model baseline metrics (Recall@5 and MRR) and timing/faithfulness check indicators directly into the chat stats bar.
-- ✅ **Evaluation Framework**: Verified standard metrics (Recall, Precision, MRR) calculations using automated test runners.
+- ✅ **Failure Analysis**: Extracted and categorized retrieval failures from SQuAD v2 and MS MARCO benchmarks (semantic drift, complex query structures, out-of-vocabulary terms, poor chunk boundaries).
+- ✅ **Analysis Figures**: Generated visualizations (charts, confusion matrices, histograms) of failure categories and quality distributions.
+- ✅ **Documentation**: Documented the RAG core pipeline, model switching API logic, prompt optimizer, and faithfulness evaluator.
 
 ---
 
 ## Next Steps (Following Weeks per RAG Project Guideline)
-- **Week 10 (July 30-August 5)**: Phase 9: Final Submission (Prepare final IEEE-style report and presentation slides).
 - **Week 11 (August 6-12)**: Final Demo Preparation & Presentation.
 
 ---
 
-*Last Updated: July 7, 2026*
+*Last Updated: July 16, 2026*
