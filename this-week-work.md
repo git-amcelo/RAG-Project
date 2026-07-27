@@ -34,6 +34,25 @@ According to the RAG Project Guideline, Week 10 focuses on **Phase 9: Final Subm
 - **Build the slide deck** summarizing motivation, system architecture, methodology, experiments, results, and conclusions.
 - **Include key visuals**: embedding comparison charts, retrieval metric tables, and failure-mode figures from Week 9.
 - **Prepare a live/recorded walkthrough** of the working RAG system for the demo.
+Each team has 7 minutes for the presentation and 3 minutes for Q&A
+
+The following is the general outline of the presentation.  
+
+Introduction
+Problem Statement 
+Methodologies or Approaches Towards Solution 
+Overall Project Planning
+Technologies Used 
+Important Snapshots 
+Challenges faced 
+Major Learning from the project
+Conclusion
+//You may include other relevant slide/s as you deem fit - time permitting 
+ 
+
+Make sure all team members take turns, and you complete the presentation within 10 minutes 
+7 minutes for presentation and 3 minutes for Q&A
+Please make sure your slides are brief and to the point, and avoid elaborate statements or paragraphs
 
 #### 3. Final Deliverables Package Assembly (Priority: Medium)
 - **Consolidate experimental results** into final performance tables and comparison graphs.
