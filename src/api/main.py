@@ -208,7 +208,9 @@ async def health_check():
 
     # Get statistics
     documents = document_processor.list_processed_documents() if document_processor else []
-    models_loaded = list(rag_chains.keys())
+    # rag_chains also holds per-request chains keyed by compound strings (see /chat);
+    # only report the base ModelType-keyed chains here
+    models_loaded = [model for model in rag_chains.keys() if isinstance(model, ModelType)]
 
     # Get cache stats from active chain
     cache_stats = None
@@ -270,7 +272,8 @@ async def upload_document(file: UploadFile = File(...)):
             try:
                 rag_chain.index_documents(chunks)
             except Exception as e:
-                print(f"Warning: Could not index in {model_type.value}: {e}")
+                label = model_type.value if isinstance(model_type, ModelType) else model_type
+                print(f"Warning: Could not index in {label}: {e}")
 
         return {
             "success": True,
@@ -313,8 +316,20 @@ async def chat(request: ChatRequest):
             enable_query_expansion=request.enable_query_expansion,
             enable_context_compression=request.enable_context_compression
         )
-        rag_chains[chain_key] = RAGChain(config)
+        new_chain = RAGChain(config)
+        rag_chains[chain_key] = new_chain
         print(f"✓ Created new RAG chain: {chain_key}")
+
+        # Backfill with already-uploaded documents so the first query
+        # against a freshly created chain isn't answered against an empty index
+        if document_processor:
+            for doc in document_processor.list_processed_documents():
+                full_doc = document_processor.get_processed_document(doc["document_id"])
+                if full_doc and full_doc.get("chunks"):
+                    try:
+                        new_chain.index_documents(full_doc["chunks"])
+                    except Exception as e:
+                        print(f"Warning: Could not backfill {doc.get('file_name')} into {chain_key}: {e}")
 
     rag_chain = rag_chains[chain_key]
 
@@ -561,7 +576,7 @@ async def get_active_model():
     """
     return {
         "active_model": active_model.value,
-        "available_models": [model.value for model in rag_chains.keys()]
+        "available_models": [model.value for model in rag_chains.keys() if isinstance(model, ModelType)]
     }
 
 
