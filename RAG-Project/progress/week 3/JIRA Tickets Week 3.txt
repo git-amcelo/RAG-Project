@@ -1,0 +1,179 @@
+JIRA Tickets - RAG Project Week 3 Completion
+
+ Overview
+
+ 4 JIRA tickets documenting the completed work from Week 3, one per team member, with screenshot references.
+
+ ---
+ Ticket RAG-W3-01
+
+ Title: Data Pipeline - MS MARCO Dataset Extraction & Processing
+
+ Type: Story | Priority: High | Story Points: 5 | Assignee: Team Member 1
+
+ Description:
+ Successfully extracted and processed the MS MARCO v2.1 dataset for the RAG system. Implemented data loader with
+ preprocessing, cleaning, and train/validation/test splits.
+
+ Completed Work:
+ - Extracted 1,000 queries from MS MARCO v2.1 validation split
+ - Extracted 9,975 passages (avg 10 per query)
+ - Extracted qrels (relevance judgments) for 446 queries
+ - Cleaned and preprocessed text data
+ - Created train/validation/test splits
+
+ Screenshot Proof:
+ File: progress/week 3/1) Test data pipeline test.png
+
+ Results:
+ ✓ Loaded processed data:
+   Queries: 1000
+   Passages: 9975
+   Queries with qrels: 446
+   Avg query length: 6.56 words
+   Avg passage length: 56.47 words
+
+ Files Created:
+ - src/data_loader.py - MSMarcoDataLoader class
+ - extract_data.py - Data extraction script
+ - data/processed/queries.json
+ - data/processed/passages.json
+ - data/processed/qrels.json
+
+ Definition of Done: ✅ Complete
+ - Data successfully extracted and saved
+ - Data loader tested and working
+ - All test cases passing
+
+ ---
+ Ticket RAG-W3-02
+
+ Title: Embedding Models - BGE-small & E5-base Implementation
+
+ Type: Story | Priority: High | Story Points: 5 | Assignee: Team Member 2
+
+ Description:
+ Implemented embedding model infrastructure supporting both BGE-small and E5-base. Added encoding functionality,
+ similarity computation, and model comparison capabilities.
+
+ Completed Work:
+ - Integrated BGE-small (384 dimensions, fast)
+ - Integrated E5-base (768 dimensions, medium speed)
+ - Implemented query vs passage encoding
+ - Implemented cosine similarity computation
+ - Added device support (CPU/MPS/CUDA)
+ - Model comparison and benchmarking
+
+ Screenshot Proof:
+ File: progress/week 3/2) Embedding pipeline test .png
+
+ Model Specs:
+
+ ┌───────────┬────────────┬────────┬───────────────────────┐
+ │   Model   │ Dimensions │ Speed  │       Use Case        │
+ ├───────────┼────────────┼────────┼───────────────────────┤
+ │ BGE-small │ 384        │ Fast   │ General retrieval     │
+ ├───────────┼────────────┼────────┼───────────────────────┤
+ │ E5-base   │ 768        │ Medium │ Context-heavy queries │
+ └───────────┴────────────┴────────┴───────────────────────┘
+
+ Files Created:
+ - src/embeddings.py - EmbeddingModel class
+ - Supports: BAAI/bge-small-en-v1.5, intfloat/e5-base-v2
+
+ Definition of Done: ✅ Complete
+ - Both models load successfully
+ - Encoding produces correct dimensions
+ - Similarity computation verified
+
+ ---
+ Ticket RAG-W3-03
+
+ Title: Vector Store & Retrieval Pipeline - FAISS Implementation
+
+ Type: Story | Priority: High | Story Points: 5 | Assignee: Team Member 3
+
+ Description:
+ Built the complete dense retrieval pipeline using FAISS for efficient similarity search. Implemented vector store with
+  multiple index types and DenseRetriever for end-to-end retrieval.
+
+ Completed Work:
+ - VectorStore class with FAISS integration
+ - Flat index (exact search, baseline)
+ - IVF index (faster, approximate)
+ - HNSW index support (production-ready)
+ - DenseRetriever class for retrieval
+ - Query encoding and top-k retrieval
+ - Passage indexing with batch support
+
+ Screenshot Proof:
+ File: progress/week 3/3) Retriever pipeline test.png
+
+ Index Types Implemented:
+
+ ┌──────┬───────────┬────────────┬──────────────────────┐
+ │ Type │   Speed   │  Accuracy  │       Best For       │
+ ├──────┼───────────┼────────────┼──────────────────────┤
+ │ Flat │ Slow      │ Exact      │ Baseline, small data │
+ ├──────┼───────────┼────────────┼──────────────────────┤
+ │ IVF  │ Fast      │ Near-exact │ Medium-large data    │
+ ├──────┼───────────┼────────────┼──────────────────────┤
+ │ HNSW │ Very Fast │ Near-exact │ Production systems   │
+ └──────┴───────────┴────────────┴──────────────────────┘
+
+ Files Created:
+ - src/vector_store.py - VectorStore class
+ - src/retriever.py - DenseRetriever class
+
+ Definition of Done: ✅ Complete
+ - All index types working
+ - Search returns correct results
+ - Retrieval tested on sample queries
+
+ ---
+ Ticket RAG-W3-04
+
+ Title: Evaluation Metrics - Retrieval Quality Assessment
+
+ Type: Story | Priority: High | Story Points: 5 | Assignee: Team Member 4
+
+ Description:
+ Implemented comprehensive evaluation metrics for retrieval quality assessment. Built RetrievalEvaluator with Recall@K,
+  MRR, Precision@K, and MAP metrics.
+
+ Completed Work:
+ - Recall@K implementation (K=1,5,10)
+ - MRR (Mean Reciprocal Rank) implementation
+ - Precision@K implementation
+ - MAP (Mean Average Precision) implementation
+ - RetrievalEvaluator class for batch evaluation
+ - evaluate_retriever() function for end-to-end testing
+ - Baseline performance documented
+
+ Screenshot Proof:
+ File: progress/week 3/4) Eval pipeline test.png
+
+ Test Results:
+ ✓ Metrics:
+     Recall@1: 0.5000
+     Recall@5: 1.0000
+     Precision@5: 0.4000
+     MRR: 1.0000
+
+ ✓ Mean Metrics (3 queries):
+     Recall@1: 0.3333
+     Recall@5: 0.5000
+     Recall@10: 0.5000
+     MRR: 0.6667
+     MAP: 0.6667
+
+ Files Created:
+ - src/evaluation.py - RetrievalEvaluator, recall_at_k, mrr, precision_at_k
+ - run_week3_tests.py - Complete test suite
+
+ Definition of Done: ✅ Complete
+ - All metrics implemented
+ - Evaluation tested on sample data
+ - Test suite passing
+
+ ---

@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      # If you need to override env vars, you can do so here
+      # Or just let it pick up the .env file copied into the image
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount data, models, and knowledge directories if you want changes to persist
+      # or if your friend needs to provide them locally.
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./knowledge:/app/knowledge
+      - ./.env:/app/.env
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
